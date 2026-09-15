@@ -11,20 +11,27 @@ API contract and adds **region tracking**.
 ## Repository layout
 
 ```
-sp_quiz/                 <- Render "Root Directory"
+sp_quiz/                 <- the application
 ├── app.py               Flask backend
 ├── templates/quiz.html  EN/ES quiz page (inline CSS + JS)
 ├── requirements.txt
 ├── Procfile             web: ./start_render.sh
 └── start_render.sh      gunicorn app:app on $PORT
+
+Procfile                 <- root launcher, used when Root Directory is empty
+start_render.sh          gunicorn --chdir sp_quiz app:app
+requirements.txt
 README.md
 ```
 
-The app deliberately lives in `sp_quiz/` because the existing Render service
+The real application lives in `sp_quiz/` because the existing Render service
 `service-quiz` has its **Root Directory** set to `sp_quiz` (inherited from the
-old `byd-tools` repository). Keeping that layout means the service config needs
-no change. If you would rather have the app at the repository root, move the
-files up one level and clear the Root Directory in the Render settings.
+old `byd-tools` repository).
+
+The three root-level files are a thin launcher that loads the same code with
+`gunicorn --chdir sp_quiz`; nothing is duplicated. The service therefore builds
+whether the Root Directory is left empty **or** set to `sp_quiz`. If you only
+ever use one setting, you can delete the launcher files for the other.
 
 ## What it does
 
@@ -96,8 +103,14 @@ python3 app.py                   # http://localhost:8791
 
 ## Deploying on Render
 
-- **Root Directory:** `sp_quiz`
-- Build: Python. Start command comes from `Procfile` (`./start_render.sh`).
+- **Root Directory:** `sp_quiz` — or leave it **empty**; both work.
+- **Start Command:** leave empty so the `Procfile` is used. If a custom command
+  is set, make it `gunicorn app:app` (with Root Directory `sp_quiz`) or
+  `gunicorn --chdir sp_quiz app:app` (with Root Directory empty).
+- Build: Python.
 - Set `TURSO_AUTH_TOKEN` in the service environment (the token itself is never
   committed).
 - Auto-deploy on push to `main`.
+- If a build still reports `Root directory "sp_quiz" does not exist` after this
+  commit, use **Clear build cache & deploy** in Render — the directory is
+  present in the repository, so that error means a stale build cache.
