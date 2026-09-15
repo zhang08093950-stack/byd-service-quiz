@@ -54,6 +54,8 @@
     .btn-submit:disabled { opacity: 0.4; cursor: default; }
     .btn-start { width: 100%; padding: 17px; font-size: 1.05rem; font-weight: 700; background: var(--accent); color: #fff; border-radius: 16px; box-shadow: 0 4px 16px rgba(227,24,55,0.25); margin-bottom: 24px; }
     .btn-restart { background: var(--accent); color: #fff; padding: 14px 40px; font-size: 0.95rem; }
+    /* Secondary action: hand the user back to the TQC checklist item. */
+    .btn-back { background: var(--card, #fff); color: var(--text, #1C1C1E); border: 1px solid var(--border); padding: 14px 40px; font-size: 0.95rem; margin-left: 10px; }
     .result-bar {
       display: flex; gap: 8px; margin-top: 12px;
     }
@@ -118,6 +120,8 @@
 
 <script>
 var lang = '{{ lang }}';
+{# Validated server-side against a host allowlist (see app.py). Null when absent or rejected. #}
+var RETURN_URL = {{ (return_url or '')|tojson }};
 var T = {
   en: {
     start: 'Start Quiz · 5 Questions', submit: 'Submit Answer',
@@ -126,7 +130,7 @@ var T = {
     recentHistory: 'Recent Sessions', noHistory: 'Complete a quiz to see history',
     excellent: 'Excellent!', good: 'Good Work!', keep: 'Keep Studying!',
     passedX: ' correct · ', incorrectX: ' incorrect · ', totalX: ' total',
-    tryAgain: 'Try Again', noQuestions: 'No questions available.',
+    tryAgain: 'Try Again', backToTqc: 'Back to TQC', noQuestions: 'No questions available.',
     qOf: 'of', brand: 'BYD After-Sales',
     subtitle: '88 Questions · 6 Categories · Fill-in-the-Blank',
     footer: 'BYD Auto · Service Advisor Training',
@@ -139,7 +143,7 @@ var T = {
     recentHistory: 'Sesiones Recientes', noHistory: 'Completa un quiz para ver historial',
     excellent: '¡Excelente!', good: '¡Buen Trabajo!', keep: '¡Sigue Estudiando!',
     passedX: ' correcto · ', incorrectX: ' incorrecto · ', totalX: ' total',
-    tryAgain: 'Intentar de Nuevo', noQuestions: 'No hay preguntas disponibles.',
+    tryAgain: 'Intentar de Nuevo', backToTqc: 'Volver a TQC', noQuestions: 'No hay preguntas disponibles.',
     qOf: 'de', brand: 'BYD Postventa',
     subtitle: '88 Preguntas · 6 Categorías · Completar',
     footer: 'BYD Auto · Capacitación de Asesores',
@@ -258,6 +262,16 @@ function updateStats() {
   document.getElementById('failed-stat').textContent = '✗ ' + incorrect;
 }
 
+// Return to the TQC checklist item this quiz was launched from. The URL was
+// validated server-side, so this never navigates where the launcher did not say.
+function goBackToLauncher() {
+  if (!RETURN_URL) return;
+  // TQC opens this page in a new tab, so closing it is the tidiest return. Only
+  // script-opened windows may be closed, so fall back to navigating this tab.
+  window.close();
+  setTimeout(function () { window.location.href = RETURN_URL; }, 150);
+}
+
 function finishQuiz() {
   console.log('finishQuiz called. answered=' + answered + ' results.length=' + results.length);
   document.getElementById('quiz-screen').style.display = 'none';
@@ -268,6 +282,7 @@ function finishQuiz() {
       '<h2>' + (pct >= 80 ? t('excellent') : pct >= 50 ? t('good') : t('keep')) + '</h2>' +
       '<p class="breakdown">' + correct + t('passedX') + incorrect + t('incorrectX') + questions.length + t('totalX') + '</p>' +
       '<button class="btn btn-restart" onclick="location.reload()">' + t('tryAgain') + '</button>' +
+      (RETURN_URL ? '<button class="btn btn-back" onclick="goBackToLauncher()">' + t('backToTqc') + '</button>' : '') +
     '</div>';
   var payload = {session_id: sessionId, answers: results};
   console.log('Submitting quiz:', payload);

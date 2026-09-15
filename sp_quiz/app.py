@@ -13,11 +13,41 @@ Supports ?lang=en | ?lang=es (default: en).
 
 import random, os, json, logging, time, ipaddress
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 import requests
 from flask import Flask, render_template, jsonify, request, g, has_request_context
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ── Return-to-launcher support ──
+#
+# TQC (byd-tqc.onrender.com) links here with ?return=<its own URL> so the
+# inspector can get back to the checklist item after answering. The value is
+# attacker-controllable, so it is checked against an allowlist — otherwise this
+# endpoint would be an open redirect that lets anyone bounce users off our
+# domain via a crafted quiz link.
+RETURN_HOST_ALLOWLIST = {"byd-tqc.onrender.com", "localhost", "127.0.0.1"}
+
+
+def safe_return_url(raw):
+    """Return a validated absolute http(s) URL to hand back to, or None.
+
+    Anything not on RETURN_HOST_ALLOWLIST is dropped (the template then simply
+    renders no return button).
+    """
+    if not raw:
+        return None
+    try:
+        parts = urlparse(raw)
+    except ValueError:
+        return None
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        return None
+    if (parts.hostname or "") not in RETURN_HOST_ALLOWLIST:
+        return None
+    return raw
+
 
 # ── Turso config (shared with the tech quiz) ──
 TURSO_URL = os.environ.get("TURSO_URL",
@@ -239,7 +269,8 @@ def _no_cache(resp):
 
 @app.route("/")
 def index():
-    return _no_cache(app.make_response(render_template("quiz.html")))
+    return _no_cache(app.make_response(render_template(
+        "quiz.html", return_url=safe_return_url(request.args.get("return")))))
 
 
 @app.route("/api/health")
