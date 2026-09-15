@@ -4,9 +4,27 @@ EN/ES fill-in-the-blank questionnaire for BYD Service Advisors, served at
 <https://service-quiz.onrender.com/>.
 
 This repository is a faithful rebuild (2026-09-15) of the app that used to live
-in `byd-tools`, which was deleted. The front end in `templates/quiz.html` is the
-page exactly as it was served live; the backend reproduces the observed API
-contract and adds **region tracking**.
+in `byd-tools`, which was deleted. The front end in `sp_quiz/templates/quiz.html`
+is the page exactly as it was served live; the backend reproduces the observed
+API contract and adds **region tracking**.
+
+## Repository layout
+
+```
+sp_quiz/                 <- Render "Root Directory"
+├── app.py               Flask backend
+├── templates/quiz.html  EN/ES quiz page (inline CSS + JS)
+├── requirements.txt
+├── Procfile             web: ./start_render.sh
+└── start_render.sh      gunicorn app:app on $PORT
+README.md
+```
+
+The app deliberately lives in `sp_quiz/` because the existing Render service
+`service-quiz` has its **Root Directory** set to `sp_quiz` (inherited from the
+old `byd-tools` repository). Keeping that layout means the service config needs
+no change. If you would rather have the app at the repository root, move the
+files up one level and clear the Root Directory in the Render settings.
 
 ## What it does
 
@@ -70,6 +88,7 @@ migration, so a database created before the change is upgraded in place.
 ## Running locally
 
 ```bash
+cd sp_quiz
 pip install -r requirements.txt
 export TURSO_AUTH_TOKEN=...      # or put it in ~/.turso_token
 python3 app.py                   # http://localhost:8791
@@ -77,6 +96,7 @@ python3 app.py                   # http://localhost:8791
 
 ## Deploying on Render
 
+- **Root Directory:** `sp_quiz`
 - Build: Python. Start command comes from `Procfile` (`./start_render.sh`).
 - Set `TURSO_AUTH_TOKEN` in the service environment (the token itself is never
   committed).
